@@ -56,4 +56,14 @@ public class KontoTests {
         assertEquals(Waehrung.DKK, konto.getAktuelleWaehrung());
         assertEquals(Waehrung.DKK.euroInWaehrungUmrechnen(1000), konto.getKontostand(), 0);
     }
+    @Test
+    public void testIllegalArgumentEinzahlen(){
+        Konto konto = getKonto(Waehrung.EUR, 10);
+        try {
+            konto.einzahlen(-1, konto.getAktuelleWaehrung());
+            Assertions.fail();
+        }catch (IllegalArgumentException ignored){}
+
+
+    }
 }
