@@ -31,7 +31,6 @@ public abstract class Konto implements Comparable<Konto>
 	public Waehrung getAktuelleWaehrung() {
 		return waehrung;
 	}
-
 	/**
 	 * Wechselt die Währung des Kontos, in der das Konto geführt wird.
 	 * @param w Währung zu der gewechselt werden soll.
