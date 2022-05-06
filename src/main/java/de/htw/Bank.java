@@ -8,6 +8,7 @@ import java.util.*;
 public class Bank {
     // Liste aller Konten
     private Map<Long, Konto> kontoliste = new HashMap<>();
+    private long nummern = 0;
     private long bankleitzahl;
 
     /**
@@ -32,7 +33,7 @@ public class Bank {
      * @return Kontonummer
      */
     public long girokontoErstellen(Kunde inhaber){
-        long kontonummer = kontoliste.size();
+        long kontonummer = nummern++;
         Konto konto = new Girokonto(inhaber, kontonummer, 100);
         kontoliste.put(kontonummer, konto);
         return kontonummer;
@@ -44,7 +45,7 @@ public class Bank {
      * @return Kontonummer
      */
     public long sparbuchErstellen(Kunde inhaber){
-        long kontonummer = kontoliste.size();
+        long kontonummer = nummern++;
         Konto konto = new Sparbuch(inhaber, kontonummer);
         kontoliste.put(kontonummer, konto);
         return kontonummer;
@@ -98,6 +99,7 @@ public class Bank {
         if (!kontoliste.containsKey(auf))
             throw new KontoDoesntExistException(auf);
         kontoliste.get(auf).einzahlen(betrag);
+
     }
 
     /**
@@ -120,7 +122,7 @@ public class Bank {
             return kontoliste.get(nummer).getKontostand();
         throw new KontoDoesntExistException(nummer);
     }
-    public boolean geldUeberweisen(long vonKontonr, long nachKontonr, double betrag, String verwendungszweck){
+    public boolean geldUeberweisen(long vonKontonr, long nachKontonr, double betrag, String verwendungszweck) throws NichtUeberweisungsfaehigException, GesperrtException, KontoDoesntExistException{
     return false;
     }
 }
