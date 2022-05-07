@@ -65,7 +65,7 @@ public class Girokonto extends Konto implements Ueberweisungsfaehig{
     {
       if (this.isGesperrt())
             throw new GesperrtException(this.getKontonummer());
-        if (betrag < 0 || Double.isNaN(betrag) || empfaenger == null || verwendungszweck == null)
+        if (betrag <= 0 || Double.isNaN(betrag) || empfaenger == null || verwendungszweck == null)
             throw new IllegalArgumentException("Parameter fehlerhaft");
         if (getKontostand() - betrag >= - dispo)
         {
@@ -79,7 +79,7 @@ public class Girokonto extends Konto implements Ueberweisungsfaehig{
     @Override
     public void ueberweisungEmpfangen(double betrag, String vonName, long vonKontonr, long vonBlz, String verwendungszweck)
     {
-        if (betrag < 0 || Double.isNaN(betrag) || vonName == null || verwendungszweck == null)
+        if (betrag <= 0 || Double.isNaN(betrag) || vonName == null || verwendungszweck == null)
             throw new IllegalArgumentException("Parameter fehlerhaft");
         setKontostand(getKontostand() + betrag);
     }

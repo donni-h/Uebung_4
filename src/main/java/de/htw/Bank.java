@@ -122,7 +122,40 @@ public class Bank {
             return kontoliste.get(nummer).getKontostand();
         throw new KontoDoesntExistException(nummer);
     }
-    public boolean geldUeberweisen(long vonKontonr, long nachKontonr, double betrag, String verwendungszweck) throws NichtUeberweisungsfaehigException, GesperrtException, KontoDoesntExistException{
-    return false;
+
+    /**
+     *  Diese Methode überweist Geld von einem überweisungsfähigem Konto auf ein anderes.
+     * @param vonKontonr Kontonummer von der aus das Geld geschickt wird
+     * @param nachKontonr Kontonummer an die das Geld überwiesen wird
+     * @param betrag Betrag der überwiesen werden soll
+     * @param verwendungszweck Verwendungszweck der Überweisung
+     * @return true, wenn Überweisung funktioniert hat. false, wenn Überweisung abgewiesen wurde.
+     * @throws NichtUeberweisungsfaehigException
+     * @throws KontoDoesntExistException
+     */
+    public boolean geldUeberweisen(long vonKontonr, long nachKontonr, double betrag, String verwendungszweck) throws NichtUeberweisungsfaehigException, KontoDoesntExistException{ //Ich habe mich dazu entschieden diese beiden Exception weiterzugeben und die anderen in der Methode selbst zu handlen.
+        /*
+        Falls es eine bessere Alternative zu dem else if-Block gibt, bitte melden :)
+         */
+        if(!kontoliste.containsKey(vonKontonr))
+            throw new KontoDoesntExistException(vonKontonr);
+        else if (!kontoliste.containsKey(nachKontonr))
+            throw new KontoDoesntExistException(nachKontonr);
+        else if (!(kontoliste.get(vonKontonr) instanceof Ueberweisungsfaehig) || !(kontoliste.get(nachKontonr) instanceof Ueberweisungsfaehig))
+            throw new NichtUeberweisungsfaehigException("Eines der Konten ist nicht überweisungsfähig.");
+        else if (vonKontonr==nachKontonr)
+            return false;
+        Konto von = kontoliste.get(vonKontonr);
+        Konto nach = kontoliste.get(nachKontonr);
+        double vonKontostand = von.getKontostand(); // Zwischenspeichern vom Kontostand, falls es fehlschlägt
+        try {
+            if(!((Ueberweisungsfaehig) von).ueberweisungAbsenden(betrag, nach.getInhaber().getName(),nachKontonr, this.bankleitzahl, verwendungszweck)) // wenn Überweisung fehlschlägt, abbrechen...
+                return false;
+            ((Ueberweisungsfaehig) nach).ueberweisungEmpfangen(betrag,von.getInhaber().getName(),vonKontonr,this.bankleitzahl,verwendungszweck);
+            return true;
+        }catch (IllegalArgumentException | GesperrtException e){
+            von.setKontostand(vonKontostand);
+            return false;
+        }
     }
 }

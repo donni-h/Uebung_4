@@ -5,8 +5,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
-
-public class BankTests {
+/*
+ Testet die Funktionalitäten fürs Überweisen der Bankklasse
+ */
+public class BankUeberweisungTests {
+    /*
+    Initialisiert eine Bank mit Konten vor jedem Test.
+     */
     private Bank bank;
     private long girokonto1;
     private long girokonto2;
@@ -20,16 +25,22 @@ public class BankTests {
         sparbuch1 = bank.sparbuchErstellen(new Kunde());
         sparbuch2 = bank.sparbuchErstellen(new Kunde());
     }
+    /*
+    guter Test, sollte normal verlaufen
+     */
     @Test
-    public void testGirozuGiro() throws KontoDoesntExistException, GesperrtException, NichtUeberweisungsfaehigException {
+    public void testGirozuGiro() throws KontoDoesntExistException, NichtUeberweisungsfaehigException {
         bank.geldEinzahlen(girokonto1,1000);
         bank.geldEinzahlen(girokonto2,1000);
         assertTrue(bank.geldUeberweisen(girokonto1, girokonto2, 100, "Überweisungstext"));
-        assertEquals(1100, girokonto2);
-        assertEquals(900, girokonto1);
+        assertEquals(1100, bank.getKontostand(girokonto2));
+        assertEquals(900, bank.getKontostand(girokonto1));
     }
+    /*
+    Überweisungsbetrag überschreitet Kontostand + Dispo
+     */
     @Test
-    public void testGirozuGiroZuViel() throws KontoDoesntExistException, GesperrtException, NichtUeberweisungsfaehigException {
+    public void testGirozuGiroZuViel() throws KontoDoesntExistException, NichtUeberweisungsfaehigException {
         bank.geldEinzahlen(girokonto1, 1000);
         bank.geldEinzahlen(girokonto2, 1000);
         assertFalse(bank.geldUeberweisen(girokonto1, girokonto2, 11000, "Überweisungstext"));
@@ -37,30 +48,33 @@ public class BankTests {
         assertEquals(1000, bank.getKontostand(girokonto2));
 
     }
+    /*
+    ein negativer Wert soll überwiesen werden
+     */
     @Test
-    public void testGirozuGiroNegativ() throws KontoDoesntExistException, GesperrtException, NichtUeberweisungsfaehigException {
+    public void testGirozuGiroNegativ() throws KontoDoesntExistException, NichtUeberweisungsfaehigException {
         bank.geldEinzahlen(girokonto1, 1000);
         bank.geldEinzahlen(girokonto2, 1000);
-        try {
-            bank.geldUeberweisen(girokonto1, girokonto2, 1100, "Überweisungstext");
-            Assertions.fail();
-        }catch (IllegalArgumentException ignored){}
+        assertFalse(bank.geldUeberweisen(girokonto1, girokonto2, -1000, "Überweisungstext"));
         assertEquals(1000, bank.getKontostand(girokonto1));
         assertEquals(1000, bank.getKontostand(girokonto2));
     }
+    /*
+    der Wert 0 soll überwiesen werden, Mindestbetrag sollte 0.01 sein.
+     */
     @Test
-    public void testGirozuGiroNull() throws KontoDoesntExistException, GesperrtException, NichtUeberweisungsfaehigException {
+    public void testGirozuGiroNull() throws KontoDoesntExistException, NichtUeberweisungsfaehigException {
         bank.geldEinzahlen(girokonto1,1000);
         bank.geldEinzahlen(girokonto2,1000);
-        try {
-            bank.geldUeberweisen(girokonto1, girokonto2, 0, "Überweisungstext");
-            Assertions.fail();
-        }catch (IllegalArgumentException ignored){}
+        assertFalse(bank.geldUeberweisen(girokonto1, girokonto2, 0, "Überweisungstext"));
         assertEquals(1000, bank.getKontostand(girokonto1));
         assertEquals(1000, bank.getKontostand(girokonto2));
     }
+    /*
+    Man kann von einem Sparbuch aus keine Überweisung tätigen
+     */
     @Test
-    public void sparbuchZuGiro() throws KontoDoesntExistException, GesperrtException {
+    public void sparbuchZuGiro() throws KontoDoesntExistException {
          bank.geldEinzahlen(sparbuch1, 10);
          try {
              bank.geldUeberweisen(sparbuch1, girokonto1, 1,"Überweisungstext");
@@ -68,8 +82,11 @@ public class BankTests {
          }catch (NichtUeberweisungsfaehigException ignored){}
          assertEquals(10,bank.getKontostand(sparbuch1));
     }
+    /*
+    Ein Sparbuch soll keine Überweisungen empfangen können.
+     */
     @Test
-    public void giroZuSparbuch() throws KontoDoesntExistException, GesperrtException {
+    public void giroZuSparbuch() throws KontoDoesntExistException {
         bank.geldEinzahlen(girokonto1, 10);
         try {
             bank.geldUeberweisen(girokonto1,sparbuch1, 1,"Überweisungstext");
@@ -78,7 +95,7 @@ public class BankTests {
         assertEquals(10,bank.getKontostand(girokonto1));
     }
     @Test
-    public void sparbuchZuSparbuch() throws KontoDoesntExistException, GesperrtException {
+    public void sparbuchZuSparbuch() throws KontoDoesntExistException{
         bank.geldEinzahlen(sparbuch1, 10);
         try {
             bank.geldUeberweisen(sparbuch1,sparbuch2, 1,"Überweisungstext");
@@ -86,40 +103,57 @@ public class BankTests {
         }catch (NichtUeberweisungsfaehigException ignored){}
         assertEquals(10,bank.getKontostand(sparbuch1));
     }
+    /*
+    Man kann nicht auf das gleiche Konto überweisen
+     */
     @Test
-    public void testUeberweisungAufGleichesKonto() throws KontoDoesntExistException, GesperrtException, NichtUeberweisungsfaehigException {
+    public void testUeberweisungAufGleichesKonto() throws KontoDoesntExistException, NichtUeberweisungsfaehigException {
         bank.geldEinzahlen(girokonto1, 1);
-        try {
-            bank.geldUeberweisen(girokonto1, girokonto1, 1, "Überweisungstext");
-            Assertions.fail();
-        }catch (NichtUeberweisungsfaehigException ignored){}
+        assertFalse(bank.geldUeberweisen(girokonto1, girokonto1, 1, "Überweisungstext"));
         assertEquals(1,bank.getKontostand(girokonto1));
     }
+    /*
+    Ein Konto das nicht existiert kann nicht überweisen
+     */
     @Test
-    public void konto1DoesntExist() throws GesperrtException, NichtUeberweisungsfaehigException {
+    public void konto1DoesntExist() throws NichtUeberweisungsfaehigException {
         try {
             bank.geldUeberweisen(-1, girokonto1, 1, "Überweisungstext");
             Assertions.fail();
         }catch (KontoDoesntExistException ignored){}
     }
+    /*
+    Man kann nicht an ein Konto überweisen, welches nicht existiert
+     */
     @Test
-    public void konto2DoesntExist() throws GesperrtException, NichtUeberweisungsfaehigException, KontoDoesntExistException {
+    public void konto2DoesntExist() throws NichtUeberweisungsfaehigException, KontoDoesntExistException {
         bank.geldEinzahlen(girokonto1, 1);
         try {
             bank.geldUeberweisen(girokonto1, -1, 1, "Überweisungstext");
             Assertions.fail();
-        }catch (KontoDoesntExistException ignored){}
+        }catch (KontoDoesntExistException ignored){
+            assertEquals(1,bank.getKontostand(girokonto1));
+        }
     }
     @Test
-    public void konto1And2DoesntExist() throws GesperrtException, NichtUeberweisungsfaehigException, KontoDoesntExistException {
+    public void konto1And2DoesntExist() throws NichtUeberweisungsfaehigException {
         try {
             bank.geldUeberweisen(-2, -1, 1, "Überweisungstext");
             Assertions.fail();
         }catch (KontoDoesntExistException ignored){}
     }
-
-
-    // Normalerweise würde ich noch nach gesperrt testen, jedoch sollten wir diese Funktionalität noch nicht implementieren...
+    /*
+    Eine Überweisung muss einen Verwendungszweck beinhalten
+     */
+    @Test
+    public void testGirozuGiroNoText() throws KontoDoesntExistException, NichtUeberweisungsfaehigException {
+        bank.geldEinzahlen(girokonto1,1000);
+        bank.geldEinzahlen(girokonto2,1000);
+        assertFalse(bank.geldUeberweisen(girokonto1, girokonto2, 100, null));
+        assertEquals(1000, bank.getKontostand(girokonto1));
+        assertEquals(1000, bank.getKontostand(girokonto2));
+    }
+    // Wie kann ich gesperrt testen, wenn ich von der Bank aus die Konten nicht ändern kann und keine externen Konten der Bank hinzufügen kann?
 
 
 }
