@@ -82,7 +82,7 @@ public abstract class Konto implements Comparable<Konto>
 	 * liefert den Kontoinhaber zurück
 	 * @return   der Inhaber
 	 */
-	public final Kunde getInhaber() {
+	public Kunde getInhaber() {
 		return this.inhaber;
 	}
 	
@@ -105,7 +105,7 @@ public abstract class Konto implements Comparable<Konto>
 	 * liefert den aktuellen Kontostand
 	 * @return   double
 	 */
-	public final double getKontostand() {
+	public double getKontostand() {
 		return kontostand;
 	}
 
@@ -113,7 +113,7 @@ public abstract class Konto implements Comparable<Konto>
 	 * liefert die Kontonummer zurück
 	 * @return   long
 	 */
-	public final long getKontonummer() {
+	public long getKontonummer() {
 		return nummer;
 	}
 
@@ -121,7 +121,7 @@ public abstract class Konto implements Comparable<Konto>
 	 * liefert zurück, ob das Konto gesperrt ist oder nicht
 	 * @return true, wenn das Konto gesperrt ist
 	 */
-	public final boolean isGesperrt() {
+	public boolean isGesperrt() {
 		return gesperrt;
 	}
 
@@ -255,10 +255,7 @@ public abstract class Konto implements Comparable<Konto>
 			return false;
 		if(this.getClass() != other.getClass())
 			return false;
-		if(this.nummer == ((Konto)other).nummer)
-			return true;
-		else
-			return false;
+		return this.nummer == ((Konto) other).nummer;
 	}
 	
 	@Override
@@ -270,10 +267,6 @@ public abstract class Konto implements Comparable<Konto>
 	@Override
 	public int compareTo(Konto other)
 	{
-		if(other.getKontonummer() > this.getKontonummer())
-			return -1;
-		if(other.getKontonummer() < this.getKontonummer())
-			return 1;
-		return 0;
+		return Long.compare(this.getKontonummer(), other.getKontonummer());
 	}
 }

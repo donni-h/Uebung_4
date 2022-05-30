@@ -8,7 +8,7 @@ import java.util.*;
 public class Bank {
     // Liste aller Konten
     private Map<Long, Konto> kontoliste = new HashMap<>();
-    private long nummern = 0;
+    private long nummern = 1;
     private long bankleitzahl;
 
     /**
@@ -39,6 +39,11 @@ public class Bank {
         return kontonummer;
     }
 
+    public long mockEinfuegen(Konto k){
+        long kontonummer = nummern++;
+        kontoliste.put(kontonummer, k);
+        return kontonummer;
+    }
     /**
      * Erstellt ein neues Sparbuch
      * @param inhaber Inhaber des Kontos
