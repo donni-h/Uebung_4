@@ -1,15 +1,26 @@
 package de.htw;
 
+import java.io.Serializable;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+
 /**
  * stellt ein allgemeines Konto dar
  */
-public abstract class Konto implements Comparable<Konto>
+public abstract class Konto implements Comparable<Konto>, Serializable
 {
 	/** 
 	 * der Kontoinhaber
 	 */
 	private Kunde inhaber;
-
+	private Map<Aktie, Long> aktiendepot;
 	/**
 	 * Waehrung in der das Konto geführt wird.
 	 */
@@ -69,6 +80,7 @@ public abstract class Konto implements Comparable<Konto>
 		this.nummer = kontonummer;
 		this.kontostand = 0;
 		this.gesperrt = false;
+		this.aktiendepot = Collections.synchronizedMap(new HashMap<>());
 	}
 	
 	/**
@@ -160,6 +172,10 @@ public abstract class Konto implements Comparable<Konto>
 		ausgabe += this.getGesperrtText() + System.getProperty("line.separator");
 		return ausgabe;
 	}
+
+	public Map<Aktie, Long> getAktiendepot() {
+		return aktiendepot;
+	}
 	
 	/*
 	public void ausgeben()
@@ -188,8 +204,14 @@ public abstract class Konto implements Comparable<Konto>
 	 * @return true, wenn die Abhebung geklappt hat, 
 	 * 		   false, wenn sie abgelehnt wurde
 	 */
-	public abstract boolean abheben(double betrag) 
-								throws GesperrtException;
+	public final boolean abheben(double betrag) throws GesperrtException{
+		if (betrag < 0 || Double.isNaN(betrag)) {
+			throw new IllegalArgumentException("Betrag ungültig");
+		}
+		if(this.isGesperrt())
+			throw new GesperrtException(this.getKontonummer());
+		return abhebenSpecific(betrag);
+	}
 	
 	/**
 	 * sperrt das Konto, Aktionen zum Schaden des Benutzers sind nicht mehr möglich.
@@ -197,7 +219,7 @@ public abstract class Konto implements Comparable<Konto>
 	public final void sperren() {
 		this.gesperrt = true;
 	}
-
+	protected abstract boolean abhebenSpecific(double betrag);
 	/**
 	 * entsperrt das Konto, alle Kontoaktionen sind wieder möglich.
 	 */
@@ -268,5 +290,81 @@ public abstract class Konto implements Comparable<Konto>
 	public int compareTo(Konto other)
 	{
 		return Long.compare(this.getKontonummer(), other.getKontonummer());
+	}
+
+	/**
+	 * Erstellt einen Kaufauftrag für Aktien, die bis zu einem gewissen Preis/stück gekauft werden sollen, in der geünschten Anzahl
+	 * @param a Aktie die gekauft werden soll
+	 * @param anzahl zu kaufende Anzahl
+	 * @param hoechstpreis Preis den Aktie maximal haben darf
+	 * @return ges. Kaufpreis
+	 */
+	public Future<Double> kaufauftrag(Aktie a, int anzahl, double hoechstpreis){
+		ExecutorService executorService = Executors.newSingleThreadExecutor();
+		Callable<Double> aC = () -> {
+			Lock l = a.getLock();
+			Condition c = a.getCondition();
+			double preis;
+				do {
+				try {
+					l.lock();
+					c.await();
+				} catch (InterruptedException ignored){}
+				finally {
+					preis = anzahl * a.getKurs();
+					l.unlock();
+				}
+			}while (a.getKurs() > hoechstpreis);
+				l.lock();
+
+				if (this.abheben(preis)) {
+					if (aktiendepot.containsKey(a))
+						aktiendepot.put(a, aktiendepot.get(a)+anzahl);
+					else aktiendepot.put(a, (long) anzahl);
+				}
+				else {
+					preis = 0;
+				}
+				l.unlock();
+				return preis;
+		};
+		return executorService.submit(aC);
+	}
+
+	/**
+	 * Erstellt einen Verkaufsauftrag, der beim Erreichen eines gewissen Kurses der gewünschten Aktie, alle Aktien mit dieser WKN verkauft.
+	 * @param wkn Wertkennnummer der Aktie
+	 * @param minimalpreis Minimaler preis der erreicht sein muss um zu verkaufen
+	 * @return Wert der erhalten wurde
+	 */
+	public Future<Double> verkaufsauftrag(String wkn, double minimalpreis){
+
+		ExecutorService executorService = Executors.newSingleThreadExecutor();
+		Callable<Double> aC = () -> {
+			if (aktiendepot.keySet().stream().anyMatch(k -> k.getWertpapierKennnummer().equals(wkn))){
+				for (Aktie aktie : aktiendepot.keySet()) {
+					if (aktie.getWertpapierKennnummer().equals(wkn)) {
+						double preis;
+						Lock l = aktie.getLock();
+						Condition c = aktie.getCondition();
+						do {
+							try {
+								l.lock();
+								c.await();
+							} catch (InterruptedException ignored) {
+							} finally {
+								preis = aktie.getKurs() * aktiendepot.get(aktie);
+								l.unlock();
+							}
+						} while (aktie.getKurs() < minimalpreis);
+						aktiendepot.remove(aktie);
+						this.einzahlen(preis);
+						return preis;
+					}
+				}
+		}
+			return Double.valueOf(0);
+		};
+		return executorService.submit(aC);
 	}
 }

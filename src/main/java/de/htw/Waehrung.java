@@ -2,10 +2,12 @@ package de.htw;
 
 import org.decimal4j.util.DoubleRounder;
 
+import java.io.Serializable;
+
 /**
  * stellt Fiatwährungen dar.
  */
-public enum Waehrung {
+public enum Waehrung implements Serializable {
     EUR(1), BGN(1/1.9558), DKK(1/7.4604), MKD(1/61.62);
 
 

@@ -2,47 +2,73 @@ package de.htw;
 
 import java.time.LocalDate;
 import java.util.Arrays;
+import java.util.concurrent.*;
+import java.util.concurrent.locks.Lock;
 
 public class Main {
     /**
      * Testprogramm für Konten
      * @param args wird nicht benutzt
      */
-    public static void main(String[] args) {
+    public static void main(String[] args) throws GesperrtException, KontoDoesntExistException, InterruptedException {
         Kunde ich = new Kunde("Dorothea", "Hubrich", "zuhause", LocalDate.parse("1976-07-13"));
+        Girokonto girokonto1 = new Girokonto();
+        Girokonto girokonto2 = new Girokonto();
+        Girokonto girokonto3= new Girokonto();
+        Aktie aktie1 = new Aktie("aktie1", "1");
+        Aktie aktie2 = new Aktie("aktie2", "2");
+        Aktie aktie3 = new Aktie("aktie3", "3");
 
-        Girokonto meinGiro = new Girokonto(ich, 1234, 1000.0);
-        meinGiro.einzahlen(50);
-        meinGiro.waehrungswechsel(Waehrung.DKK);
-        System.out.println(meinGiro);
+        Runnable aktientest1 = new Aktientest(girokonto1, aktie1);
+        Runnable aktientest2 = new Aktientest(girokonto2, aktie2);
+        Runnable aktientest3 = new Aktientest(girokonto3, aktie3);
 
-        Sparbuch meinSpar = new Sparbuch(ich, 9876);
-        meinSpar.einzahlen(50);
-        try
-        {
-            boolean hatGeklappt = meinSpar.abheben(70);
-            System.out.println("Abhebung hat geklappt: " + hatGeklappt);
-            System.out.println(meinSpar);
+        ExecutorService executorService = Executors.newFixedThreadPool(3);
+        executorService.submit(aktientest1);
+        executorService.submit(aktientest2);
+        executorService.submit(aktientest3);
+        executorService.shutdown();
+        while (!executorService.isTerminated()){
+            Thread.sleep(1000);
         }
-        catch (GesperrtException e)
-        {
-            System.out.println("Zugriff auf gesperrtes Konto - Polizei rufen!");
+        System.exit(0);
+    }
+    private static class Aktientest implements Runnable{
+        Girokonto girokonto;
+        Aktie aktie;
+        public Aktientest(Girokonto girokonto, Aktie aktie){
+            this.aktie = aktie;
+            this.girokonto = girokonto;
         }
+        @Override
+        public void run() {
+            Future<Double> kaufFuture = girokonto.kaufauftrag(aktie, 3, 2.5);
+            while (!kaufFuture.isDone()){
+                try {
+                    System.out.println(aktie.getWertpapierKennnummer()+" "+aktie.getKurs() + "€");
+                    Thread.sleep(1000);
+                } catch (InterruptedException ignored) {
+                }
+            }
+            try {
+                System.out.println("---- Kaufspreis von Aktie" + aktie.getWertpapierKennnummer()+" "+kaufFuture.get());
+                System.out.println("---- Jetziger Kontostand: "+girokonto.getKontostand());
+            } catch (InterruptedException | ExecutionException ignored) {
+            }
+            Future<Double> verkaufsFuture = girokonto.verkaufsauftrag(aktie.getWertpapierKennnummer(), 2.5);
+            while (!verkaufsFuture.isDone()){
+                try {
+                    System.out.println(aktie.getWertpapierKennnummer()+" "+aktie.getKurs() + "€");
 
-        Konto k = new Girokonto();  //Polymorphie
-        //Konstruktoraufruf entscheidet über den auszuführenden Code
-        //immer und überall
-        //k.ausgeben();
-        System.out.println(k);
-
-        Kontoart art;
-        art = Kontoart.SPARBUCH;
-        art = Kontoart.valueOf("FESTGELDKONTO");
-        System.out.println(art.name() + " " + art.ordinal());
-        System.out.println(art.getWerbung());
-
-        Kontoart[] alle = Kontoart.values();
-        System.out.println("Unser Prospekt: ");
-        System.out.println(Arrays.toString(alle));
+                    Thread.sleep(1000);
+                } catch (InterruptedException ignored) {
+                }
+            }
+            try {
+                System.out.println("---- Verkaufspreis von Aktie" + aktie.getWertpapierKennnummer()+" "+verkaufsFuture.get());
+                System.out.println("---- Das Konto hat jetzt: "+ girokonto.getKontostand());
+            } catch (InterruptedException | ExecutionException ignored) {
+            }
+        }
     }
 }

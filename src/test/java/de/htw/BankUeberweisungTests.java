@@ -20,10 +20,12 @@ public class BankUeberweisungTests {
     @BeforeEach
     public void init(){
          bank = new Bank(123);
-        girokonto1 = bank.girokontoErstellen(new Kunde());
-        girokonto2 = bank.girokontoErstellen(new Kunde());
-        sparbuch1 = bank.sparbuchErstellen(new Kunde());
-        sparbuch2 = bank.sparbuchErstellen(new Kunde());
+         Kontofabrik girokontofabrik = new GirokontoFabrik();
+         Kontofabrik sparbuchfabrik = new SparbuchFabrik();
+        girokonto1 = bank.kontoErstellen(girokontofabrik, new Kunde());
+        girokonto2 = bank.kontoErstellen(girokontofabrik, new Kunde());
+        sparbuch1 = bank.kontoErstellen(sparbuchfabrik, new Kunde());
+        sparbuch2 = bank.kontoErstellen(sparbuchfabrik, new Kunde());
     }
     /*
     guter Test, sollte normal verlaufen

@@ -17,13 +17,16 @@ public class BankMockitoTest {
     Kunde kunde;
     Girokonto giroMock1, giroMock2;
     Sparbuch sparMock1, sparMock2;
+    SparbuchFabrik sparbuchFabrik;
+
+    GirokontoFabrik girokontoFabrik;
     long giro1, giro2, spar1, spar2;
 
     private void fillBank(){
-        giro1 = bank.mockEinfuegen(giroMock1);
-        giro2 = bank.mockEinfuegen(giroMock2);
-        spar1 = bank.mockEinfuegen(sparMock1);
-        spar2 = bank.mockEinfuegen(sparMock2);
+        giro1 = bank.kontoErstellen(girokontoFabrik, new Kunde());
+        giro2 = bank.kontoErstellen(girokontoFabrik, new Kunde());
+        spar1 = bank.kontoErstellen(sparbuchFabrik, new Kunde());
+        spar2 = bank.kontoErstellen(sparbuchFabrik, new Kunde());
     }
 
     /*
@@ -31,10 +34,15 @@ public class BankMockitoTest {
      */
     @BeforeEach
     public void init() throws Exception {
+        sparbuchFabrik = Mockito.mock(SparbuchFabrik.class);
+        girokontoFabrik = Mockito.mock(GirokontoFabrik.class);
+        Konto kontoMock = Mockito.mock(Konto.class);
+        Mockito.when(girokontoFabrik.erzeugen(ArgumentMatchers.any(), ArgumentMatchers.anyLong())).thenReturn(Mockito.mock(giroMock1));
+        Mockito.when(sparbuchFabrik.erzeugen(ArgumentMatchers.any(), ArgumentMatchers.anyLong())).thenReturn(Mockito.mock(Sparbuch.class));
         bank = new Bank(17122000); //Bank die getestet wird
         kunde  = new Kunde(); // Standardkunde
         giroMock1 = Mockito.mock(Girokonto.class);
-        Mockito.when(giroMock1.abheben(ArgumentMatchers.anyDouble())).thenReturn(true);
+        Mockito.when(giroMock1.abhebenSpecific(ArgumentMatchers.anyDouble())).thenReturn(true); // Passt das so?
         Mockito.when(giroMock1.getInhaber()).thenReturn(kunde);
         Mockito.when(giroMock1.getKontostand()).thenReturn(4761D);
         Mockito.when(giroMock1.getKontonummer()).thenReturn(1L);
@@ -42,7 +50,7 @@ public class BankMockitoTest {
         Mockito.when(giroMock1.getDispo()).thenReturn(500D);
         Mockito.when(giroMock1.ueberweisungAbsenden(ArgumentMatchers.anyDouble(),ArgumentMatchers.anyString(),ArgumentMatchers.anyLong(), ArgumentMatchers.anyLong(),ArgumentMatchers.anyString())).thenReturn(true);
         giroMock2 = Mockito.mock(Girokonto.class);
-        Mockito.when(giroMock2.abheben(ArgumentMatchers.anyDouble())).thenReturn(true);
+        Mockito.when(giroMock2.abhebenSpecific(ArgumentMatchers.anyDouble())).thenReturn(true);
         Mockito.when(giroMock2.getInhaber()).thenReturn(kunde);
         Mockito.when(giroMock2.getKontostand()).thenReturn(360D);
         Mockito.when(giroMock2.getKontonummer()).thenReturn(2L);
@@ -50,13 +58,13 @@ public class BankMockitoTest {
         Mockito.when(giroMock2.getDispo()).thenReturn(1000D);
         Mockito.when(giroMock2.ueberweisungAbsenden(ArgumentMatchers.anyDouble(),ArgumentMatchers.anyString(),ArgumentMatchers.anyLong(), ArgumentMatchers.anyLong(),ArgumentMatchers.anyString())).thenReturn(true);
         sparMock1 = Mockito.mock(Sparbuch.class);
-        Mockito.when(sparMock1.abheben(ArgumentMatchers.anyDouble())).thenReturn(true);
+        Mockito.when(sparMock1.abhebenSpecific(ArgumentMatchers.anyDouble())).thenReturn(true);
         Mockito.when(sparMock1.getInhaber()).thenReturn(kunde);
         Mockito.when(sparMock1.getKontostand()).thenReturn(100D);
         Mockito.when(sparMock1.getKontonummer()).thenReturn(3L);
         Mockito.when(sparMock1.isGesperrt()).thenReturn(false);
         sparMock2 = Mockito.mock(Sparbuch.class);
-        Mockito.when(sparMock2.abheben(ArgumentMatchers.anyDouble())).thenReturn(true);
+        Mockito.when(sparMock2.abhebenSpecific(ArgumentMatchers.anyDouble())).thenReturn(true);
         Mockito.when(sparMock2.getInhaber()).thenReturn(kunde);
         Mockito.when(sparMock2.getKontostand()).thenReturn(300D);
         Mockito.when(sparMock2.getKontonummer()).thenReturn(4L);
