@@ -1,5 +1,9 @@
 package de.htw;
 
+import javafx.beans.property.*;
+
+import java.beans.PropertyChangeListener;
+import java.beans.PropertyChangeSupport;
 import java.io.Serializable;
 import java.util.Collections;
 import java.util.HashMap;
@@ -29,11 +33,27 @@ public abstract class Konto implements Comparable<Konto>, Serializable
 	 * die Kontonummer
 	 */
 	private final long nummer;
+	private final PropertyChangeSupport propertyChangeSupport = new PropertyChangeSupport(this);
 
+	/**
+	 * meldet einen Beobachter am Konto an
+	 * @param b Listener der das Konto beobachtet
+	 */
+	public void anmelden(PropertyChangeListener b){
+		propertyChangeSupport.addPropertyChangeListener(b);
+	}
+
+	/**
+	 * meldet einen Beobachter vom Konto ab
+	 * @param b Listener der vom Konto entfernt werden soll
+	 */
+	public void abmelden(PropertyChangeListener b){
+		propertyChangeSupport.removePropertyChangeListener(b);
+	}
 	/**
 	 * der aktuelle Kontostand
 	 */
-	private double kontostand;
+	private ReadOnlyDoubleWrapper kontostand;
 
 	/**
 	 * Gibt die Währung in der das Konto geführt wird wieder.
@@ -48,22 +68,27 @@ public abstract class Konto implements Comparable<Konto>, Serializable
 	 */
 	public void waehrungswechsel(Waehrung w) {
 		setKontostand(w.euroInWaehrungUmrechnen(this.getAktuelleWaehrung().waehrungInEuroUmrechnen(this.getKontostand())));
+		Waehrung tmp = this.waehrung;
 		this.waehrung = w;
-
+		propertyChangeSupport.firePropertyChange("Waehrung", tmp, w);
 	}
 	/**
 	 * setzt den aktuellen Kontostand
 	 * @param kontostand neuer Kontostand
 	 */
 	protected void setKontostand(double kontostand) {
-		this.kontostand = kontostand;
+		this.kontostand.set(kontostand);
+		this.negative.set(kontostand<0);
+	}
+	public ReadOnlyDoubleProperty kontostandProperty() {
+		return this.kontostand.getReadOnlyProperty();
 	}
 
 	/**
 	 * Wenn das Konto gesperrt ist (gesperrt = true), können keine Aktionen daran mehr vorgenommen werden,
 	 * die zum Schaden des Kontoinhabers wären (abheben, Inhaberwechsel)
 	 */
-	private boolean gesperrt;
+	private BooleanProperty gesperrt;
 
 	/**
 	 * Setzt die beiden Eigenschaften kontoinhaber und kontonummer auf die angegebenen Werte,
@@ -78,8 +103,11 @@ public abstract class Konto implements Comparable<Konto>, Serializable
 			throw new IllegalArgumentException("Inhaber darf nicht null sein!");
 		this.inhaber = inhaber;
 		this.nummer = kontonummer;
-		this.kontostand = 0;
-		this.gesperrt = false;
+		this.kontostand = new ReadOnlyDoubleWrapper();
+		gesperrt = new SimpleBooleanProperty();
+		negative = new SimpleBooleanProperty();
+		this.setKontostand(0);
+		this.gesperrt.set(false);
 		this.aktiendepot = Collections.synchronizedMap(new HashMap<>());
 	}
 	
@@ -107,10 +135,11 @@ public abstract class Konto implements Comparable<Konto>, Serializable
 	public final void setInhaber(Kunde kinh) throws GesperrtException{
 		if (kinh == null)
 			throw new IllegalArgumentException("Der Inhaber darf nicht null sein!");
-		if(this.gesperrt)
-			throw new GesperrtException(this.nummer);        
+		if(this.gesperrt.get())
+			throw new GesperrtException(this.nummer);
+		Kunde tmp = this.inhaber;
 		this.inhaber = kinh;
-
+		propertyChangeSupport.firePropertyChange("Kunde", tmp, inhaber);
 	}
 	
 	/**
@@ -118,7 +147,7 @@ public abstract class Konto implements Comparable<Konto>, Serializable
 	 * @return   double
 	 */
 	public double getKontostand() {
-		return kontostand;
+		return kontostand.get();
 	}
 
 	/**
@@ -134,7 +163,7 @@ public abstract class Konto implements Comparable<Konto>, Serializable
 	 * @return true, wenn das Konto gesperrt ist
 	 */
 	public boolean isGesperrt() {
-		return gesperrt;
+		return gesperrt.get();
 	}
 
 	/**
@@ -156,7 +185,9 @@ public abstract class Konto implements Comparable<Konto>, Serializable
 		if (betrag < 0 || Double.isNaN(betrag)) {
 			throw new IllegalArgumentException("Falscher Betrag");
 		}
+		double tmp = getKontostand();
 		setKontostand(getKontostand() + betrag);
+		propertyChangeSupport.firePropertyChange("Kontostand", tmp, getKontostand());
 	}
 	
 	/**
@@ -210,21 +241,35 @@ public abstract class Konto implements Comparable<Konto>, Serializable
 		}
 		if(this.isGesperrt())
 			throw new GesperrtException(this.getKontonummer());
-		return abhebenSpecific(betrag);
+		double tmp = getKontostand();
+		boolean b = abhebenSpecific(betrag);
+		if (b)
+			propertyChangeSupport.firePropertyChange("Kontostand", tmp, getKontostand());
+		return b;
 	}
-	
+	public BooleanProperty gesperrtProperty(){
+		return gesperrt;
+	}
+
+	/**
+	 * Gibt an, ob Kontostand negativ ist.
+	 */
+	private BooleanProperty negative;
 	/**
 	 * sperrt das Konto, Aktionen zum Schaden des Benutzers sind nicht mehr möglich.
 	 */
 	public final void sperren() {
-		this.gesperrt = true;
+		propertyChangeSupport.firePropertyChange("Sperrung", this.gesperrt, true);
+		this.gesperrt.set(true);
+
 	}
 	protected abstract boolean abhebenSpecific(double betrag);
 	/**
 	 * entsperrt das Konto, alle Kontoaktionen sind wieder möglich.
 	 */
 	public final void entsperren() {
-		this.gesperrt = false;
+		propertyChangeSupport.firePropertyChange("Sperrung", this.gesperrt, false);
+		this.gesperrt.set(false);
 	}
 	
 	
@@ -232,9 +277,12 @@ public abstract class Konto implements Comparable<Konto>, Serializable
 	 * liefert eine String-Ausgabe, wenn das Konto gesperrt ist
 	 * @return "GESPERRT", wenn das Konto gesperrt ist, ansonsten ""
 	 */
+	public BooleanProperty negativeProperty(){
+		return this.negative;
+	}
 	public final String getGesperrtText()
 	{
-		if (this.gesperrt)
+		if (this.gesperrt.get())
 		{
 			return "GESPERRT";
 		}
@@ -318,9 +366,13 @@ public abstract class Konto implements Comparable<Konto>, Serializable
 				l.lock();
 
 				if (this.abheben(preis)) {
-					if (aktiendepot.containsKey(a))
-						aktiendepot.put(a, aktiendepot.get(a)+anzahl);
+					long tmp = 0;
+					if (aktiendepot.containsKey(a)) {
+						tmp = aktiendepot.get(a);
+						aktiendepot.put(a, aktiendepot.get(a) + anzahl);
+					}
 					else aktiendepot.put(a, (long) anzahl);
+					propertyChangeSupport.firePropertyChange("Aktie", tmp, aktiendepot.get(a));
 				}
 				else {
 					preis = 0;
@@ -357,7 +409,9 @@ public abstract class Konto implements Comparable<Konto>, Serializable
 								l.unlock();
 							}
 						} while (aktie.getKurs() < minimalpreis);
+						long tmp = aktiendepot.get(aktie);
 						aktiendepot.remove(aktie);
+						propertyChangeSupport.firePropertyChange("Aktie", tmp, 0);
 						this.einzahlen(preis);
 						return preis;
 					}

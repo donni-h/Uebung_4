@@ -1,5 +1,8 @@
 package de.htw;
 
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
+
 import java.io.Serializable;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -47,7 +50,7 @@ Kunde implements Comparable<Kunde>, Serializable {
 	/**
 	 * Die Adresse
 	 */
-	private String adresse;
+	private StringProperty adresse;
 	/**
 	 * Geburtstag
 	 */
@@ -74,7 +77,8 @@ Kunde implements Comparable<Kunde>, Serializable {
 			throw new IllegalArgumentException("null als Parameter nich erlaubt");
 		this.vorname = vorname;
 		this.nachname = nachname;
-		this.adresse = adresse;
+		this.adresse = new SimpleStringProperty();
+		this.adresse.set(adresse);
 		this.geburtstag = gebdat;
 	}
 
@@ -120,9 +124,11 @@ Kunde implements Comparable<Kunde>, Serializable {
 	 * @return Adresse des Kunden
 	 */
 	public String getAdresse() {
+		return adresse.get();
+	}
+	public StringProperty stringProperty(){
 		return adresse;
 	}
-
 	/**
 	 * setzt die Adresse auf den angegebenen Wert
 	 * 
@@ -132,7 +138,7 @@ Kunde implements Comparable<Kunde>, Serializable {
 	public void setAdresse(String adresse) {
 		if(adresse == null)
 			throw new IllegalArgumentException("Adresse darf nicht null sein");
-		this.adresse = adresse;
+		this.adresse.set(adresse);
 	}
 
 	/**

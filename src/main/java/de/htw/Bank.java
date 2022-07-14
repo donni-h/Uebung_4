@@ -82,12 +82,6 @@ public class Bank implements Cloneable, Serializable {
         kontoliste.put(kontonummer, k);
         return kontonummer;
     }
-    public long mockEinfuegen(Konto k) {
-        long kontonummer = nummern++;
-        kontoliste.put(kontonummer, k);
-        return kontonummer;
-    }
-
     /**
      * Erstellt ein neues Sparbuch
      *
